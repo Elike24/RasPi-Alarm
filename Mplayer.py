@@ -1,5 +1,6 @@
 import os
 import time
+from datetime import timedelta, datetime
 
 from threading import Thread
 
@@ -16,7 +17,7 @@ class Mplayer(object):
         self.pipe_file = pipe_file
         self.last_started = None
 
-    def start(self, song_file: str, duration: int) -> None:
+    def start(self, song_file: str, duration: timedelta) -> None:
         if self.running:
             self.stop()
             return
@@ -33,18 +34,23 @@ class Mplayer(object):
 
         # start player
         mplayer_options = "-really-quiet -slave -input file=\"%s\"" % self.pipe_file
-        player_thread = Thread(None, Mplayer.__run_mplayer, "Alarm MPlayer thread", (mplayer_options, song_file))
-        self.last_started = time.time()
+        self.last_started = datetime.now()
+        player_thread = Thread(None, self.__run_mplayer, "Alarm MPlayer thread",
+                               (mplayer_options, song_file, self.last_started))
         player_thread.start()
         stopper_thread = Thread(None, self.__stop_mplayer, "Alarm stopper thread", (duration, self.last_started))
         stopper_thread.start()
 
-    @staticmethod
-    def __run_mplayer(options: str, song: str) -> None:
-        os.system("mplayer %s \"%s\"" % (options, song))
+    def __run_mplayer(self, options: str, song: str, started: datetime) -> None:
+        while self.running and self.last_started == started:
+            result = os.system("mplayer %s \"%s\"" % (options, song))
+            # 256 means KeyboardInterrupt
+            if result != 0 and result != 256:
+                print("Error %i when trying to play. Is mplayer installed?" % result)
+                self.stop()
 
-    def __stop_mplayer(self, duration: int, started: float) -> None:
-        time.sleep(duration)
+    def __stop_mplayer(self, duration: timedelta, started: datetime) -> None:
+        time.sleep(duration.total_seconds())
         if self.last_started == started:
             self.stop()
 

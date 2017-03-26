@@ -1,45 +1,46 @@
-from datetime import datetime
-from enum import Enum
+from datetime import datetime, timedelta
+
+from Day import Day
 
 
 class Alarm:
     repeated = False
-    days = Day.getfromint(datetime.today().weekday())
+    song_default = "/home/elias/Musik/Alarm.mp3"
 
-    def __init__(self, repeated: bool, days: Day, hour, minute, song: str, duration=3, enabled: bool = True):
+    def __init__(self, days: Day = Day.get_from_int(datetime.today().weekday()),
+                 time: datetime.time = (datetime.now() + timedelta(seconds=2)).time(),
+                 song: str = song_default, repeated: bool = False, duration: timedelta = timedelta(minutes=5),
+                 enabled: bool = True):
         self.repeated = repeated
         self.days = days
-        self.hour = hour
-        self.minute = minute
+        self.time = time
         self.enabled = enabled
         self.song = song
         self.duration = duration
 
-    def should_ring(self) -> bool:
-        return self.enabled
+    def next_ring(self) -> datetime or None:
+        if (not self.days) or (not self.enabled):
+            return None
 
+        ring_time = datetime.now()
+        # set microseconds
+        if ring_time.microsecond > self.time.microsecond:
+            ring_time += timedelta(seconds=1)
+        ring_time = ring_time.replace(microsecond=self.time.microsecond)
+        # set seconds
+        if ring_time.second > self.time.microsecond:
+            ring_time += timedelta(minutes=1)
+        ring_time = ring_time.replace(second=self.time.second)
+        # set minutes
+        if ring_time.minute > self.time.minute:
+            ring_time += timedelta(hours=1)
+        ring_time = ring_time.replace(minute=self.time.minute)
+        # set hour
+        if ring_time.hour > self.time.hour:
+            ring_time += timedelta(days=1)
+        ring_time = ring_time.replace(hour=self.time.hour)
+        # set day
+        while not self.days & Day.get_from_int(ring_time.weekday()):
+            ring_time += timedelta(days=1)
+        return ring_time
 
-class Day(Enum):  # replace Enum with Flag once using Python 3.6
-    Mo = 1
-    Tu = 2
-    We = 4
-    Th = 8
-    Fr = 16
-    Sa = 32
-    Su = 64
-
-    @staticmethod
-    def get_from_int(weekday: int):
-        return {
-            0: Day.Mo,
-            1: Day.Tu,
-            2: Day.We,
-            3: Day.Th,
-            4: Day.Fr,
-            5: Day.Sa,
-            6: Day.Su
-        }.get(weekday, Day.Mo)
-
-    @staticmethod
-    def everyday():
-        return Day.Mo | Day.Tu | Day.We | Day.Th | Day.Fr | Day.Sa | Day.Su
