@@ -14,33 +14,36 @@ __license__ = "GNU General Public License v3 (GPLv3)"
 __email__ = "elias.keis@freenet.de"
 
 
-alarms = [Alarm(True, "", "", "", "/home/elias/Musik/Alarm.mp3", True)]
+alarms = [Alarm(True, "", "", "", "/home/elias/Musik/Alarm.mp3")]
+# Alarm(True, "", "", "", "/home/elias/Musik/Alarm2.mp3")
+
 pipedir = tempfile.mkdtemp("", "AlarmMPlayerPipe")
 pipefile = os.path.join(pipedir, "pipe")
 player = Mplayer(tempfile.gettempdir(), pipefile)
 
 
-def waitforalarms():
-    while True:
-        for alarm in alarms:
-            if alarm.shouldring():
-                print("Ringing alarm!")
-                player.start(alarm.song)
-                if not alarm.repeated:
-                    alarms.remove(alarm)
-                time.sleep(3)
-                player.stop()
-        time.sleep(3)
+def waitforalarms() -> None:
+    try:
+        while True:
+            for alarm in alarms:
+                if alarm.shouldring():
+                    print("Ringing alarm!")
+                    player.start(alarm.song, alarm.duration)
+                    if not alarm.repeated:
+                        alarms.remove(alarm)
+            time.sleep(6)
+    except KeyboardInterrupt:
+        return
 
 
-def printhelp(error=""):
+def printhelp(error: str = "") -> None:
     if not error == "":
-        print(error + "\n\n")
+        print(error + "\n")
     print("-" * 5 + " HELP " + "-" * 5 + "\n")
-    print("This program does nothing\n")
+    print("This program is not doing much so far ...\n")
 
 
-def main():
+def main() -> None:
     args = sys.argv
     args.pop(0)
     if len(args) == 0:
@@ -52,8 +55,12 @@ def main():
         print("Version : %s" % __version__)
     else:
         printhelp("Unknown command")
+
     player.stop()
-    os.remove(pipefile)
+    try:
+        os.remove(pipefile)
+    except OSError:
+        pass  # file did not exist
     os.rmdir(pipedir)
 
 

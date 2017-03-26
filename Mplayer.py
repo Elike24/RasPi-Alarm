@@ -1,4 +1,5 @@
 import os
+import time
 
 from threading import Thread
 
@@ -10,14 +11,15 @@ class MplayerNotInstalledException(Exception):
 
 class Mplayer(object):
 
-    def __init__(self, pipedir, pipefile):
+    def __init__(self, pipedir: str, pipefile: str):
         self.running = False
         self.pipedir = pipedir
         self.pipefile = pipefile
+        self.laststarted = None
 
-    def start(self, songfile):
+    def start(self, songfile: str, duration: int) -> None:
         if self.running:
-            print("Alarm is already running!\n")
+            self.stop()
             return
         self.running = True
 
@@ -27,25 +29,30 @@ class Mplayer(object):
         try:
             os.remove(self.pipefile)
         except OSError:
-            pass
+            pass  # file did not exist
         os.mkfifo(self.pipefile)
 
         # start player
         mplayer_options = "-really-quiet -slave -input file=\"%s\"" % self.pipefile
-        thread = Thread(None, Mplayer.__runmplayer, "Alarm MPlayer thread", (mplayer_options, songfile))
-        thread.start()
-        print("Alarm started!")
+        playerthread = Thread(None, Mplayer.__runmplayer, "Alarm MPlayer thread", (mplayer_options, songfile))
+        self.laststarted = time.time()
+        playerthread.start()
+        stopperthread = Thread(None, self.__stopplayer, "Alarm stopper thread", (duration, self.laststarted))
+        stopperthread.start()
 
     @staticmethod
-    def __runmplayer(options, song):
+    def __runmplayer(options: str, song: str) -> None:
         os.system("mplayer %s \"%s\"" % (options, song))
 
-    def stop(self):
+    def __stopplayer(self, duration: int, started: float) -> None:
+        time.sleep(duration)
+        if self.laststarted == started:
+            self.stop()
+
+    def stop(self) -> None:
         if not self.running:
-            print("No alarm running!\n")
             return
         self.running = False
-        print("Stopping alarm...")
 
         # quit using pipefile
         if not os.path.exists(self.pipedir):
