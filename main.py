@@ -3,7 +3,7 @@ import sys
 import tempfile
 import time
 
-from Alarm import Alarm
+from Alarm import *
 from Mplayer import Mplayer
 
 __all__ = "alarm"
@@ -13,20 +13,19 @@ __version__ = "{0}.{1}".format(*__version_info__)
 __license__ = "GNU General Public License v3 (GPLv3)"
 __email__ = "elias.keis@freenet.de"
 
-
-alarms = [Alarm(True, "", "", "", "/home/elias/Musik/Alarm.mp3")]
+alarms = [Alarm(True, Day.everyday(), "", "", "/home/elias/Musik/Alarm.mp3")]
 # Alarm(True, "", "", "", "/home/elias/Musik/Alarm2.mp3")
 
-pipedir = tempfile.mkdtemp("", "AlarmMPlayerPipe")
-pipefile = os.path.join(pipedir, "pipe")
-player = Mplayer(tempfile.gettempdir(), pipefile)
+pipe_dir = tempfile.mkdtemp("", "AlarmMPlayerPipe")
+pipe_file = os.path.join(pipe_dir, "pipe")
+player = Mplayer(tempfile.gettempdir(), pipe_file)
 
 
-def waitforalarms() -> None:
+def wait_for_alarms() -> None:
     try:
         while True:
             for alarm in alarms:
-                if alarm.shouldring():
+                if alarm.should_ring():
                     print("Ringing alarm!")
                     player.start(alarm.song, alarm.duration)
                     if not alarm.repeated:
@@ -36,7 +35,7 @@ def waitforalarms() -> None:
         return
 
 
-def printhelp(error: str = "") -> None:
+def print_help(error: str = "") -> None:
     if not error == "":
         print(error + "\n")
     print("-" * 5 + " HELP " + "-" * 5 + "\n")
@@ -48,20 +47,20 @@ def main() -> None:
     args.pop(0)
     if len(args) == 0:
         print("Waiting for alarms to ring...")
-        waitforalarms()
+        wait_for_alarms()
     elif len(args) == 1 and args[0] == "-h" or args[0] == "--help":
-        printhelp()
+        print_help()
     elif len(args) == 1 and args[0] == "-v" or args[0] == "--version":
         print("Version : %s" % __version__)
     else:
-        printhelp("Unknown command")
+        print_help("Unknown command")
 
     player.stop()
     try:
-        os.remove(pipefile)
+        os.remove(pipe_file)
     except OSError:
         pass  # file did not exist
-    os.rmdir(pipedir)
+    os.rmdir(pipe_dir)
 
 
 if __name__ == "__main__":
