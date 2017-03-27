@@ -5,11 +5,6 @@ from datetime import timedelta, datetime
 from threading import Thread
 
 
-class MplayerNotInstalledException(Exception):
-    def __init__(self):
-        print("Error: Mplayer required for playing alarm sounds\n")
-
-
 class Mplayer(object):
     def __init__(self, pipe_dir: str, pipe_file: str):
         self.running = False
@@ -64,8 +59,11 @@ class Mplayer(object):
         # quit using pipe file
         if not os.path.exists(self.pipe_dir):
             os.mkdir(self.pipe_dir)
-        with open(self.pipe_file, "w") as stream:
-            stream.write("quit\n")
-            stream.close()
+        try:
+            with open(self.pipe_file, "w") as stream:
+                stream.write("quit\n")
+                stream.close()
+        except BrokenPipeError:
+            print("Pipe broken, cannot close it.")
 
         self.running = False
