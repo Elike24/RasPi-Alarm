@@ -44,3 +44,41 @@ class Alarm:
             ring_time += timedelta(days=1)
         return ring_time
 
+    def next_ring_or_max(self) -> datetime:
+        ring_time = self.next_ring()
+        if ring_time is None:
+            ring_time = datetime.max
+        return ring_time
+
+    def __lt__(self, other) -> bool:
+        assert isinstance(other, Alarm) or isinstance(other, datetime)
+        if isinstance(other, Alarm):
+            other_time = other.next_ring_or_max()
+        else:
+            other_time = other
+        return self.next_ring_or_max() < other_time
+
+    def __le__(self, other) -> bool:
+        assert isinstance(other, Alarm) or isinstance(other, datetime)
+        if isinstance(other, Alarm):
+            other_time = other.next_ring_or_max()
+        else:
+            other_time = other
+        return self.next_ring_or_max() <= other_time
+
+    def __ge__(self, other) -> bool:
+        assert isinstance(other, Alarm) or isinstance(other, datetime)
+        if isinstance(other, Alarm):
+            other_time = other.next_ring_or_max()
+        else:
+            other_time = other
+        return self.next_ring_or_max() >= other_time
+
+    def __gt__(self, other) -> bool:
+        assert isinstance(other, Alarm) or isinstance(other, datetime)
+        if isinstance(other, Alarm):
+            other_time = other.next_ring_or_max()
+        else:
+            other_time = other
+        return self.next_ring_or_max() > other_time
+

@@ -18,7 +18,7 @@ class AlarmClock:
     def handle_next_alarm(self) -> bool:
         next_alarm_time = None
         next_alarm = None
-        self.alarms.sort(key=Alarm.next_ring)
+        self.alarms.sort()
         for alarm in self.alarms:
             next_alarm_time = alarm.next_ring()
             if next_alarm_time is not None:
