@@ -1,8 +1,9 @@
 import os
+import re
 import sys
 import tempfile
+from datetime import timedelta
 
-from Alarm import *
 from Mplayer import Mplayer
 
 __all__ = "alarm"
@@ -24,6 +25,19 @@ def add_gpio_listener(pin_nr, callback, bounce_time=200):
         return
 
 
+def parse_time(time_str):
+    regex = re.compile(r'((?P<hours>\d+?)hr)?((?P<minutes>\d+?)m)?((?P<seconds>\d+?)s)?')
+    parts = regex.match(time_str)
+    if not parts:
+        return
+    parts = parts.groupdict()
+    time_params = {}
+    for (name, param) in parts.items():
+        if param:
+            time_params[name] = int(param)
+    return timedelta(**time_params)
+
+
 def print_help(error: str = "") -> None:
     if not error == "":
         print(error + "\n")
@@ -42,7 +56,8 @@ def main() -> None:
     args = sys.argv
     args.pop(0)
 
-    alarm = Alarm
+    alarm_sound = "/home/elias/Musik/Alarm2.mp3"
+    alarm_duration = timedelta(minutes=5)
     no_gpio = False
     pin_nr = 7
 
@@ -61,14 +76,14 @@ def main() -> None:
                 print_help("Missing argument: song file")
                 return
             else:
-                alarm.song = args[cur_arg_i]
+                alarm_sound = args[cur_arg_i]
                 cur_arg_i += 1
         elif cur_arg == "--duration" or cur_arg == "-d":
             if cur_arg_i >= len(args):
                 print_help("Missing argument: duration")
                 return
             else:
-                alarm.duration = Alarm.parse_time(args[cur_arg_i])
+                alarm_duration = parse_time(args[cur_arg_i])
                 cur_arg_i += 1
         elif cur_arg == "--no-gpio":
             no_gpio = True
@@ -85,20 +100,20 @@ def main() -> None:
 
     pipe_dir = tempfile.mkdtemp("", "AlarmMPlayerPipe")
     pipe_file = os.path.join(pipe_dir, "pipe")
-    player = Mplayer(tempfile.gettempdir(), pipe_file)
-    player.start(alarm.song, alarm.duration)
+    player = Mplayer()
+    player.start(alarm_sound, alarm_duration)
 
     if not no_gpio:
         def got_pin_input(changed_pin):
             if changed_pin == pin_nr:
-                player.shut_down()
+                player.stop()
         add_gpio_listener(pin_nr, got_pin_input)
     try:
         import time
         while player.running:
             time.sleep(1)
     except KeyboardInterrupt:
-        player.shut_down()
+        player.stop()
     try:
         os.remove(pipe_file)
     except OSError:
