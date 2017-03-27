@@ -20,7 +20,6 @@ class Mplayer(object):
     def start(self, song_file: str, duration: timedelta) -> None:
         if self.running:
             self.stop()
-            return
         self.running = True
 
         # create pipe file
@@ -42,6 +41,7 @@ class Mplayer(object):
         stopper_thread.start()
 
     def __run_mplayer(self, options: str, song: str, started: datetime) -> None:
+        print("Playing alarm sound...")
         while self.running and self.last_started == started:
             result = os.system("mplayer %s \"%s\"" % (options, song))
             # 256 means KeyboardInterrupt
@@ -52,12 +52,14 @@ class Mplayer(object):
     def __stop_mplayer(self, duration: timedelta, started: datetime) -> None:
         time.sleep(duration.total_seconds())
         if self.last_started == started:
+            print("Stopping alarm sound!")
             self.stop()
+        else:
+            print("Did not stop alarm sound, player is already playing next one")
 
     def stop(self) -> None:
         if not self.running:
             return
-        self.running = False
 
         # quit using pipe file
         if not os.path.exists(self.pipe_dir):
@@ -65,3 +67,5 @@ class Mplayer(object):
         with open(self.pipe_file, "w") as stream:
             stream.write("quit\n")
             stream.close()
+
+        self.running = False

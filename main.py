@@ -31,11 +31,16 @@ def main() -> None:
     args.pop(0)
     if len(args) == 0:
         print("Waiting for alarms to ring...")
-        clock = AlarmClock(player, [Alarm(duration=timedelta(seconds=3))])
+        clock = AlarmClock(player, [Alarm(duration=timedelta(seconds=3),
+                                          time=(datetime.now() + timedelta(seconds=12)).time()),
+                                    Alarm(duration=timedelta(seconds=3)),
+                                    Alarm(time=(datetime.now() + timedelta(seconds=10)).time(),
+                                          song="/home/elias/Musik/Alarm2.mp3", duration=timedelta(seconds=10))])
         try:
             while clock.handle_next_alarm():
                 pass
         except KeyboardInterrupt:
+            player.stop()
             print("Bye!\n")
     elif len(args) == 1 and args[0] == "-h" or args[0] == "--help":
         print_help()
@@ -44,7 +49,8 @@ def main() -> None:
     else:
         print_help("Unknown command")
 
-    player.stop()
+    while player.running:
+        pass
     try:
         os.remove(pipe_file)
     except OSError:
