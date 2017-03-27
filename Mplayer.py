@@ -11,9 +11,10 @@ class Mplayer(object):
         self.pipe_dir = pipe_dir
         self.pipe_file = pipe_file
         self.last_started = None
+        self.shutdown = False
 
     def start(self, song_file: str, duration: timedelta) -> None:
-        if self.running:
+        if self.running and not self.shutdown:
             self.stop()
         self.running = True
 
@@ -37,17 +38,22 @@ class Mplayer(object):
 
     def __run_mplayer(self, options: str, song: str, started: datetime) -> None:
         print("Playing alarm sound...")
-        while self.running and self.last_started == started:
-            result = os.system("mplayer %s \"%s\"" % (options, song))
+        while self.running and (not self.shutdown) and self.last_started == started:
+            result = os.system("mplayer %s \"%s\" << end\nend" % (options, song))
             # 256 means KeyboardInterrupt
-            if result != 0 and result != 256:
+            if result == 2:
+                self.shut_down()
+                return
+            elif result != 0 and result != 256:
                 print("Error %i when trying to play. Is mplayer installed?" % result)
                 self.stop()
 
     def __stop_mplayer(self, duration: timedelta, started: datetime) -> None:
-        time.sleep(duration.total_seconds())
+        for slept in range(0, int(duration.total_seconds())):
+            if self.shutdown:
+                return
+            time.sleep(1)
         if self.last_started == started:
-            print("Stopping alarm sound!")
             self.stop()
         else:
             print("Did not stop alarm sound, player is already playing next one")
@@ -56,14 +62,21 @@ class Mplayer(object):
         if not self.running:
             return
 
-        # quit using pipe file
-        if not os.path.exists(self.pipe_dir):
-            os.mkdir(self.pipe_dir)
-        try:
-            with open(self.pipe_file, "w") as stream:
-                stream.write("quit\n")
-                stream.close()
-        except BrokenPipeError:
-            print("Pipe broken, cannot close it.")
+        print("Stopping alarm sound!")
 
-        self.running = False
+        # quit using pipe file
+        try:
+            if not os.path.exists(self.pipe_dir):
+                os.mkdir(self.pipe_dir)
+            try:
+                with open(self.pipe_file, "w") as stream:
+                    stream.write("quit\n")
+                    stream.close()
+            except BrokenPipeError:
+                print("Pipe broken, cannot close it.")
+        finally:
+            self.running = False
+
+    def shut_down(self) -> None:
+        self.shutdown = True
+        self.stop()
