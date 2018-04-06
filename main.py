@@ -21,7 +21,7 @@ def add_gpio_listener(pin_nr, callback, bounce_time=200):
         import RPi.GPIO as GPIO
         GPIO.setmode(GPIO.BOARD)
         GPIO.setup(pin_nr, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-        GPIO.add_event_detect(pin_nr, GPIO.FALLING, callback=callback, bounce_time=bounce_time)
+        GPIO.add_event_detect(pin_nr, GPIO.FALLING, callback=callback, bouncetime=bounce_time)
     except RuntimeError:
         print_help("Failed to add pin listener, are we on an Raspberry Pi? If not, use --no-gpio!")
         return
