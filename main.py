@@ -3,6 +3,8 @@ import re
 import sys
 import tempfile
 from datetime import timedelta
+from os import path
+from random import choice
 
 from Mplayer import Mplayer
 
@@ -46,17 +48,29 @@ def print_help(error: str = "") -> None:
           "--version\t-v\tprint version\n" +
           "--help\t\t-h\tprint this message\n" +
           "--song <s>\t-s <s>\tplays sound from file stored at <s>\n" +
-          "--duration <t>\t-d <t>\thow long the song is played (default 5min).\n"+
+          "--playlist <p>\t-p <p>\tplays random sound from playlist stored at <p>\n" +
+          "--duration <t>\t-d <t>\thow long the song is played (default 5min).\n" +
           "\t\t\tExamples: 5s, 3h:4min:2s, ...\n" +
           "--no-gpio\t\tDisables GPIO-Pins\n" +
           "--pin <p>\t-p <p>\tNumber of the GPIO-Pin to use")
+
+
+def songs_in_playlist(playlist):
+    songs = []
+    with open(playlist) as f:
+        for line in f.readlines():
+            song = line.strip()
+            if not path.isabs(song):
+                song = path.join(path.dirname(playlist), song)
+            songs.append(song)
+    return songs
 
 
 def main() -> None:
     args = sys.argv
     args.pop(0)
 
-    alarm_sound = "/home/elias/Musik/Alarm2.mp3"
+    alarm_sounds = []
     alarm_duration = timedelta(minutes=5)
     no_gpio = False
     pin_nr = 7
@@ -76,8 +90,19 @@ def main() -> None:
                 print_help("Missing argument: song file")
                 return
             else:
-                alarm_sound = args[cur_arg_i]
+                alarm_sounds.append(args[cur_arg_i])
                 cur_arg_i += 1
+        elif cur_arg == "--playlist" or cur_arg == "-p":
+            if cur_arg_i >= len(args):
+                print_help("Missing argument: playlist file")
+                return
+            else:
+                alarm_playlist = args[cur_arg_i]
+                cur_arg_i += 1
+                try:
+                    alarm_sounds.extend(songs_in_playlist(alarm_playlist))
+                except IOError:
+                    print_help("Invalid playlist file")
         elif cur_arg == "--duration" or cur_arg == "-d":
             if cur_arg_i >= len(args):
                 print_help("Missing argument: duration")
@@ -97,6 +122,12 @@ def main() -> None:
         else:
             print_help("Unknown parameter '%s'" % cur_arg)
             return
+
+    if len(alarm_sounds) < 1:
+        print_help("You should provide at least one song or playlist file")
+        return
+
+    alarm_sound = choice(alarm_sounds)
 
     pipe_dir = tempfile.mkdtemp("", "AlarmMPlayerPipe")
     pipe_file = os.path.join(pipe_dir, "pipe")
